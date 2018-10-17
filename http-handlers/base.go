@@ -1,10 +1,11 @@
-package handlers
+package httphandlers
 
 import (
 	"encoding/json"
 	"fmt"
 	"net/http"
 
+	"github.com/RobHumphris/bluetooth-tests/data"
 	"github.com/gorilla/mux"
 	"github.com/thoas/stats"
 )
@@ -20,9 +21,17 @@ func init() {
 }
 
 func SetupHandlers() {
-	Mux.HandleFunc("/", Root).Methods("GET")
-	Mux.HandleFunc("/discovered", Peripherals).Methods("GET")
-	Mux.HandleFunc("/health", Health).Methods("GET")
+	Mux.HandleFunc("/discovered", func(w http.ResponseWriter, r *http.Request) {
+		writeObjectResponse(data.DiscoveredPeripherals.List(), w)
+	}).Methods("GET")
+
+	Mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		writeObjectResponse(Stats.Data(), w)
+	}).Methods("GET")
+
+	Mux.HandleFunc("/access/{mac}", Access).Methods("GET")
+
+	Mux.PathPrefix("/").Handler(http.StripPrefix("/", http.FileServer(http.Dir("./bin/static/"))))
 }
 
 func writeHeader(w http.ResponseWriter, status ...int) {

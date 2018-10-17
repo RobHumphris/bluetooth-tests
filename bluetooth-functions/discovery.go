@@ -1,25 +1,23 @@
 package bluetoothfunctions
 
 import (
-	"fmt"
-	"log"
-
+	"github.com/RobHumphris/bluetooth-tests/global"
 	"github.com/paypal/gatt"
 )
 
-func Discoverer(ch chan string) {
-	fmt.Printf("Discoverer")
-	d, err := gatt.NewDevice(DefaultClientOptions...)
-	if err != nil {
-		log.Fatalf("Failed to open device, err: %s\n", err)
-		return
-	}
+func ListDiscovered(p gatt.Peripheral, a *gatt.Advertisement) {
+	LogPeripheralData(p)
+	LogAdvertisementData(a)
+}
+
+func Discoverer(ch chan gatt.Peripheral) {
+	global.Debugf("Discoverer")
 
 	onStateChanged := func(d gatt.Device, s gatt.State) {
-		fmt.Println("State:", s)
+		global.Debugf("State: %s", s)
 		switch s {
 		case gatt.StatePoweredOn:
-			fmt.Println("scanning...")
+			global.Debugf("scanning...")
 			d.Scan([]gatt.UUID{}, false)
 			return
 		default:
@@ -29,15 +27,14 @@ func Discoverer(ch chan string) {
 
 	onPeriphDiscovered := func(p gatt.Peripheral, a *gatt.Advertisement, rssi int) {
 		if len(a.Services) > 0 {
-			if AvertisedService.Equal(a.Services[0]) {
-				//fmt.Printf("\nFound 8Power Peripheral ID: (%s)\n", p.ID())
-				ch <- p.ID()
+			if AvertisedServiceUUID.Equal(a.Services[0]) {
+				ch <- p
 			}
 		}
 	}
 
 	// Register handlers.
-	d.Handle(gatt.PeripheralDiscovered(onPeriphDiscovered))
-	d.Init(onStateChanged)
+	HCIDevice.Handle(gatt.PeripheralDiscovered(onPeriphDiscovered))
+	HCIDevice.Init(onStateChanged)
 	select {}
 }
